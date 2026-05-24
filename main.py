@@ -1,10 +1,13 @@
-from telethon import TelegramClient, events
-from telethon.sessions import StringSession
 import os
 import asyncio
 import random
 import string
-import time
+
+from telethon import TelegramClient, events
+from telethon.sessions import StringSession
+from dotenv import load_dotenv
+
+load_dotenv()
 
 API_ID = int(os.getenv("API_ID"))
 API_HASH = os.getenv("API_HASH")
@@ -17,7 +20,6 @@ client = TelegramClient(
 )
 
 AUTO_GCAST = False
-AUTO_TASK = None
 FAILED_CHATS = []
 LAST_MESSAGES = {}
 
@@ -27,6 +29,10 @@ def random_id(length=8):
             string.ascii_letters + string.digits
         ) for _ in range(length)
     )
+
+# =========================
+# SEND GCAST
+# =========================
 
 async def send_gcast(message):
 
@@ -38,7 +44,7 @@ async def send_gcast(message):
 
     FAILED_CHATS = []
 
-    task_id = random_id()
+    tid = random_id()
 
     async for dialog in client.iter_dialogs():
 
@@ -47,7 +53,7 @@ async def send_gcast(message):
             # KHUSUS GROUP
             if dialog.is_group:
 
-                # HAPUS PESAN LAMA
+                # HAPUS PESAN GCAST LAMA
                 if dialog.id in LAST_MESSAGES:
 
                     try:
@@ -78,11 +84,11 @@ async def send_gcast(message):
                 f"{dialog.name} -> {str(e)}"
             )
 
-       text = f"""
+    text = f"""
 > ⚠️ Broadcast berhasil
 
-> ✅ Berhasil: {ok}
-> ❌ Gagal: {bad}
+> ✅ Berhasil: {success}
+> ❌ Gagal: {failed}
 > ✉️ Tipe: gcast
 > 🤖 ID Tugas: {tid}
 > 👤 Owner: Anonymous
@@ -90,10 +96,7 @@ async def send_gcast(message):
 > Ketik .bc-error buat liat gagal.
 """
 
-    await event.edit(text)
-
-
-    return result
+    return text
 
 
 # =========================
@@ -128,39 +131,28 @@ async def gcast(event):
 async def auto_gcast(event):
 
     global AUTO_GCAST
-    global AUTO_TASK
-
-    AUTO_GCAST = True
 
     menit = int(
         event.pattern_match.group(1)
     )
 
-    pesan = event.pattern_match.group(2)
+    text = event.pattern_match.group(2)
 
-    delay = menit * 60
+    AUTO_GCAST = True
 
     await event.edit(
-        f"🔥 Auto GCast aktif\n\n⏱ Delay: {menit} menit\n📨 Pesan: {pesan}"
+        f"🔥 Auto Gcast aktif\n⏱ {menit} menit"
     )
 
-    async def loop_gcast():
+    while AUTO_GCAST:
 
-        global AUTO_GCAST
+        result = await send_gcast(text)
 
-        while AUTO_GCAST:
+        await event.respond(result)
 
-            result = await send_gcast(
-                pesan
-            )
-
-            await event.respond(result)
-
-            await asyncio.sleep(delay)
-
-    AUTO_TASK = asyncio.create_task(
-        loop_gcast()
-    )
+        await asyncio.sleep(
+            menit * 60
+        )
 
 
 # =========================
@@ -174,15 +166,11 @@ async def auto_gcast(event):
 async def stop_gcast(event):
 
     global AUTO_GCAST
-    global AUTO_TASK
 
     AUTO_GCAST = False
 
-    if AUTO_TASK:
-        AUTO_TASK.cancel()
-
     await event.edit(
-        "🛑 Auto GCast dihentikan."
+        "🛑 Auto Gcast dihentikan"
     )
 
 
@@ -198,17 +186,50 @@ async def bc_error(event):
 
     if not FAILED_CHATS:
 
-        await event.edit(
-            "✅ Tidak ada error."
+        return await event.edit(
+            "✅ Tidak ada chat gagal."
         )
 
-        return
+    text = "❌ CHAT GAGAL:\n\n"
 
-    text = "❌ LIST ERROR GCAST\n\n"
+    for x in FAILED_CHATS:
 
-    for x in FAILED_CHATS[:30]:
+        text += f"{x}\n"
 
-        text += f"• {x}\n"
+    await event.edit(text)
+
+
+# =========================
+# HELP
+# =========================
+
+@client.on(events.NewMessage(
+    from_users='me',
+    pattern=r'^\.help$'
+))
+async def help_cmd(event):
+
+    text = """
+🔥 MENU GCAST
+
+.gcast teks
+= gcast sekali
+
+.gcast10 teks
+= auto gcast 10 menit
+
+.gcast15 teks
+= auto gcast 15 menit
+
+.stopgcast
+= stop auto gcast
+
+.bc-error
+= lihat chat gagal
+
+.help
+= menu bantuan
+"""
 
     await event.edit(text)
 
@@ -223,59 +244,25 @@ async def bc_error(event):
 ))
 async def ping(event):
 
-    start = time.time()
-
-    msg = await event.edit(
-        "🏓 Pinging..."
-    )
-
-    end = round(
-        (time.time() - start) * 1000
-    )
-
-    await msg.edit(
-        f"🏓 Pong!\n⚡ {end}ms"
+    await event.edit(
+        "🏓 Pong! Bot aktif."
     )
 
 
 # =========================
-# HELP
+# START
 # =========================
 
-@client.on(events.NewMessage(
-    from_users='me',
-    pattern=r'^\.help$'
-))
-async def help_menu(event):
+async def main():
 
-    text = """
-🔥 GCAST MENU 🔥
+    await client.start()
 
-.gcast pesan
-➜ Broadcast sekali
+    me = await client.get_me()
 
-.gcast10 pesan
-➜ Auto broadcast tiap 10 menit
+    print(
+        f"🔥 USERBOT GCAST ONLINE: {me.first_name}"
+    )
 
-.gcast15 pesan
-➜ Auto broadcast tiap 15 menit
+    await client.run_until_disconnected()
 
-.stopgcast
-➜ Stop auto broadcast
-
-.bc-error
-➜ Lihat list gagal
-
-.ping
-➜ Check userbot online
-
-.help
-➜ Menu command
-"""
-
-    await event.edit(text)
-
-print("🔥 USERBOT GCAST ONLINE")
-
-client.start()
-client.run_until_disconnected()
+asyncio.run(main())
