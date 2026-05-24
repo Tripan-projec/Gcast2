@@ -78,17 +78,19 @@ async def send_gcast(message):
                 f"{dialog.name} -> {str(e)}"
             )
 
-    result = f"""
-⚠️ Broadcast berhasil
+   text = f"""
+> ⚠️ Broadcast berhasil
 
-✅ Berhasil: {success}
-❌ Gagal: {failed}
-✉️ Tipe: gcast
-🤖 ID Tugas: {task_id}
-👤 Owner: Anonymous
+> ✅ Berhasil: {ok}
+> ❌ Gagal: {bad}
+> ✉️ Tipe: gcast
+> 🤖 ID Tugas: {tid}
+> 👤 Owner: Anonymous
 
-Ketik .bc-error buat liat yang gagal.
+> Ketik .bc-error buat liat gagal.
 """
+
+await event.edit(text)
 
     return result
 
