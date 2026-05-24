@@ -92,7 +92,6 @@ async def send_gcast(message):
 
     await event.edit(text)
 
-await event.edit(text)
 
     return result
 
