@@ -78,7 +78,7 @@ async def send_gcast(message):
                 f"{dialog.name} -> {str(e)}"
             )
 
-   text = f"""
+       text = f"""
 > ⚠️ Broadcast berhasil
 
 > ✅ Berhasil: {ok}
@@ -89,6 +89,8 @@ async def send_gcast(message):
 
 > Ketik .bc-error buat liat gagal.
 """
+
+    await event.edit(text)
 
 await event.edit(text)
 
