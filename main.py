@@ -17,12 +17,9 @@ client = TelegramClient(
 )
 
 AUTO_GCAST = False
-AUTO_MESSAGE = ""
-AUTO_DELAY = 600
-
-LAST_MESSAGES = {}
+AUTO_TASK = None
 FAILED_CHATS = []
-
+LAST_MESSAGES = {}
 
 def random_id(length=8):
     return ''.join(
@@ -31,10 +28,10 @@ def random_id(length=8):
         ) for _ in range(length)
     )
 
-
 async def send_gcast(message):
 
     global FAILED_CHATS
+    global LAST_MESSAGES
 
     success = 0
     failed = 0
@@ -90,7 +87,7 @@ async def send_gcast(message):
 🤖 ID Tugas: {task_id}
 👤 Owner: Anonymous
 
-Ketik .bc-error buat lihat yang gagal.
+Ketik .bc-error buat liat yang gagal.
 """
 
     return result
@@ -101,15 +98,15 @@ Ketik .bc-error buat lihat yang gagal.
 # =========================
 
 @client.on(events.NewMessage(
-    outgoing=True,
-    pattern=r'^\\.gcast (.+)'
+    from_users='me',
+    pattern=r'^\.gcast (.+)'
 ))
 async def gcast(event):
 
     text = event.pattern_match.group(1)
 
     await event.edit(
-        "⏳ Mengirim gcast..."
+        "⏳ Mengirim broadcast..."
     )
 
     result = await send_gcast(text)
@@ -122,14 +119,13 @@ async def gcast(event):
 # =========================
 
 @client.on(events.NewMessage(
-    outgoing=True,
-    pattern=r'^\\.gcast(\\d+) (.+)'
+    from_users='me',
+    pattern=r'^\.gcast(\d+) (.+)'
 ))
 async def auto_gcast(event):
 
     global AUTO_GCAST
-    global AUTO_MESSAGE
-    global AUTO_DELAY
+    global AUTO_TASK
 
     AUTO_GCAST = True
 
@@ -137,25 +133,31 @@ async def auto_gcast(event):
         event.pattern_match.group(1)
     )
 
-    AUTO_DELAY = menit * 60
+    pesan = event.pattern_match.group(2)
 
-    AUTO_MESSAGE = event.pattern_match.group(2)
+    delay = menit * 60
 
     await event.edit(
-        f"🔥 Auto GCast aktif\n\n⏱ Delay: {menit} menit\n📨 Pesan: {AUTO_MESSAGE}"
+        f"🔥 Auto GCast aktif\n\n⏱ Delay: {menit} menit\n📨 Pesan: {pesan}"
     )
 
-    while AUTO_GCAST:
+    async def loop_gcast():
 
-        result = await send_gcast(
-            AUTO_MESSAGE
-        )
+        global AUTO_GCAST
 
-        await event.respond(result)
+        while AUTO_GCAST:
 
-        await asyncio.sleep(
-            AUTO_DELAY
-        )
+            result = await send_gcast(
+                pesan
+            )
+
+            await event.respond(result)
+
+            await asyncio.sleep(delay)
+
+    AUTO_TASK = asyncio.create_task(
+        loop_gcast()
+    )
 
 
 # =========================
@@ -163,14 +165,18 @@ async def auto_gcast(event):
 # =========================
 
 @client.on(events.NewMessage(
-    outgoing=True,
-    pattern=r'^\\.stopgcast$'
+    from_users='me',
+    pattern=r'^\.stopgcast$'
 ))
 async def stop_gcast(event):
 
     global AUTO_GCAST
+    global AUTO_TASK
 
     AUTO_GCAST = False
+
+    if AUTO_TASK:
+        AUTO_TASK.cancel()
 
     await event.edit(
         "🛑 Auto GCast dihentikan."
@@ -178,21 +184,19 @@ async def stop_gcast(event):
 
 
 # =========================
-# ERROR LIST
+# BC ERROR
 # =========================
 
 @client.on(events.NewMessage(
-    outgoing=True,
-    pattern=r'^\\.bc-error$'
+    from_users='me',
+    pattern=r'^\.bc-error$'
 ))
 async def bc_error(event):
-
-    global FAILED_CHATS
 
     if not FAILED_CHATS:
 
         await event.edit(
-            "✅ Tidak ada error broadcast."
+            "✅ Tidak ada error."
         )
 
         return
@@ -211,8 +215,8 @@ async def bc_error(event):
 # =========================
 
 @client.on(events.NewMessage(
-    outgoing=True,
-    pattern=r'^\\.ping$'
+    from_users='me',
+    pattern=r'^\.ping$'
 ))
 async def ping(event):
 
@@ -227,17 +231,17 @@ async def ping(event):
     )
 
     await msg.edit(
-        f"🏓 Pong!\n⚡ Speed: {end}ms"
+        f"🏓 Pong!\n⚡ {end}ms"
     )
 
 
 # =========================
-# HELP MENU
+# HELP
 # =========================
 
 @client.on(events.NewMessage(
-    outgoing=True,
-    pattern=r'^\\.help$'
+    from_users='me',
+    pattern=r'^\.help$'
 ))
 async def help_menu(event):
 
@@ -263,11 +267,10 @@ async def help_menu(event):
 ➜ Check userbot online
 
 .help
-➜ Lihat menu command
+➜ Menu command
 """
 
     await event.edit(text)
-
 
 print("🔥 USERBOT GCAST ONLINE")
 
