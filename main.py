@@ -34,7 +34,7 @@ def random_id(length=8):
 # SEND GCAST
 # =========================
 
-async def send_gcast(message):
+async def send_gcast(message, owner_name):
 
     global FAILED_CHATS
     global LAST_MESSAGES
@@ -84,14 +84,14 @@ async def send_gcast(message):
                 f"{dialog.name} -> {str(e)}"
             )
 
-    ttext = f"""
+    text = f"""
 > ⚠️ Gcast Sukses
 
 > ✅ Success: {success}
 > ❌ Failed: {failed}
 > ✉️ Type: gcast
 > ⚙️ Task ID: {tid}
-> 👤 Owner: POPAYE?
+> 👤 Owner: {owner_name}
 
 > Type .bc-error to view failed in broadcast.
 """
@@ -115,7 +115,12 @@ async def gcast(event):
         "⏳ Mengirim broadcast..."
     )
 
-    result = await send_gcast(text)
+    me = await client.get_me()
+
+    result = await send_gcast(
+        text,
+        me.first_name
+    )
 
     await event.edit(result)
 
@@ -146,7 +151,12 @@ async def auto_gcast(event):
 
     while AUTO_GCAST:
 
-        result = await send_gcast(text)
+        me = await client.get_me()
+
+        result = await send_gcast(
+            text,
+            me.first_name
+        )
 
         await event.respond(result)
 
@@ -226,6 +236,9 @@ async def help_cmd(event):
 
 .bc-error
 = lihat chat gagal
+
+.ping
+= cek bot online
 
 .help
 = menu bantuan
