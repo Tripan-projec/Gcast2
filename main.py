@@ -84,16 +84,16 @@ async def send_gcast(message):
                 f"{dialog.name} -> {str(e)}"
             )
 
-    text = f"""
-> ⚠️ Broadcast berhasil
+    ttext = f"""
+> ⚠️ Gcast Sukses
 
-> ✅ Berhasil: {success}
-> ❌ Gagal: {failed}
-> ✉️ Tipe: gcast
-> 🤖 ID Tugas: {tid}
-> 👤 Owner: Anonymous
+> ✅ Success: {success}
+> ❌ Failed: {failed}
+> ✉️ Type: gcast
+> ⚙️ Task ID: {tid}
+> 👤 Owner: POPAYE?
 
-> Ketik .bc-error buat liat gagal.
+> Type .bc-error to view failed in broadcast.
 """
 
     return text
