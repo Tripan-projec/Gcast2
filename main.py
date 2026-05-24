@@ -50,7 +50,6 @@ async def send_gcast(message, owner_name):
 
         try:
 
-            # KHUSUS GROUP
             if dialog.is_group:
 
                 # HAPUS PESAN GCAST LAMA
@@ -61,7 +60,6 @@ async def send_gcast(message, owner_name):
                             dialog.id,
                             LAST_MESSAGES[dialog.id]
                         )
-
                     except:
                         pass
 
@@ -94,7 +92,7 @@ async def send_gcast(message, owner_name):
 ⚙️ Task ID: {tid}
 👤 Owner: {owner_name}
 
-Type <code>.bc-error</code> to view failed in broadcast.
+Type <code>.bc-error</code> to view failed broadcast.
 </blockquote>
 """
 
@@ -107,7 +105,7 @@ Type <code>.bc-error</code> to view failed in broadcast.
 
 @client.on(events.NewMessage(
     from_users='me',
-    pattern=r'^\.gcast (.+)'
+    pattern=r'^\.gcast\s+(.+)'
 ))
 async def gcast(event):
 
@@ -136,7 +134,7 @@ async def gcast(event):
 
 @client.on(events.NewMessage(
     from_users='me',
-    pattern=r'^\.gcast(\d+) (.+)'
+    pattern=r'^\.autogcast(\d+)\s+(.+)'
 ))
 async def auto_gcast(event):
 
@@ -233,10 +231,10 @@ async def help_cmd(event):
 .gcast teks
 = gcast sekali
 
-.gcast10 teks
+.autogcast10 teks
 = auto gcast 10 menit
 
-.gcast15 teks
+.autogcast15 teks
 = auto gcast 15 menit
 
 .stopgcast
