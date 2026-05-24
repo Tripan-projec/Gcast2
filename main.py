@@ -85,15 +85,17 @@ async def send_gcast(message, owner_name):
             )
 
     text = f"""
-> ⚠️ Gcast Sukses
+<blockquote expandable>
+⚠️ <b>Gcast Sukses</b>
 
-> ✅ Success: {success}
-> ❌ Failed: {failed}
-> ✉️ Type: gcast
-> ⚙️ Task ID: {tid}
-> 👤 Owner: {owner_name}
+✅ Success: {success}
+❌ Failed: {failed}
+✉️ Type: gcast
+⚙️ Task ID: {tid}
+👤 Owner: {owner_name}
 
-> Type .bc-error to view failed in broadcast.
+Type <code>.bc-error</code> to view failed in broadcast.
+</blockquote>
 """
 
     return text
@@ -122,7 +124,10 @@ async def gcast(event):
         me.first_name
     )
 
-    await event.edit(result)
+    await event.edit(
+        result,
+        parse_mode='html'
+    )
 
 
 # =========================
@@ -158,7 +163,10 @@ async def auto_gcast(event):
             me.first_name
         )
 
-        await event.respond(result)
+        await event.respond(
+            result,
+            parse_mode='html'
+        )
 
         await asyncio.sleep(
             menit * 60
