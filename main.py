@@ -1,21 +1,18 @@
+# Advanced GCast Features Upgrade
+
+Ganti isi `main.py` kamu dengan versi ini.
+
+```python
+from telethon import TelegramClient, events
+from telethon.sessions import StringSession
 import os
 import asyncio
 import random
 import string
 
-from telethon import TelegramClient, events
-from telethon.sessions import StringSession
-from telethon.errors import FloodWaitError
-from telethon.tl.types import Chat, Channel
-from dotenv import load_dotenv
-
-load_dotenv()
-
 API_ID = int(os.getenv("API_ID"))
 API_HASH = os.getenv("API_HASH")
 SESSION_STRING = os.getenv("SESSION_STRING")
-OWNER_ID = int(os.getenv("OWNER_ID"))
-OWNER_NAME = os.getenv("OWNER_NAME", "OWNER")
 
 client = TelegramClient(
     StringSession(SESSION_STRING),
@@ -23,113 +20,155 @@ client = TelegramClient(
     API_HASH
 )
 
-active_auto = False
-last_messages = {}
+AUTO_GCAST = False
+AUTO_MESSAGE = ""
+AUTO_DELAY = 600
+LAST_MESSAGES = {}
+FAILED_CHATS = []
 
-def task_id():
-    return ''.join(random.choices(string.ascii_letters + string.digits, k=8))
 
-async def get_groups():
-    dialogs = await client.get_dialogs()
-    groups = []
+def random_id(length=8):
+    return ''.join(random.choice(string.ascii_letters + string.digits) for _ in range(length))
 
-    for d in dialogs:
-        if isinstance(d.entity, (Chat, Channel)):
-            groups.append(d)
 
-    return groups
+async def send_gcast(message):
+    global FAILED_CHATS
 
-async def send_broadcast(message):
     success = 0
     failed = 0
+    FAILED_CHATS = []
+    task_id = random_id()
 
-    groups = await get_groups()
-
-    for group in groups:
+    async for dialog in client.iter_dialogs():
         try:
-            # hapus pesan sebelumnya kalau ada
-            if group.id in last_messages:
-                try:
-                    await client.delete_messages(group.id, last_messages[group.id])
-                except:
-                    pass
+            if dialog.is_group:
 
-            sent = await client.send_message(group.id, message)
+                # hapus pesan lama
+                if dialog.id in LAST_MESSAGES:
+                    try:
+                        await client.delete_messages(dialog.id, LAST_MESSAGES[dialog.id])
+                    except:
+                        pass
 
-            # simpan id pesan terakhir
-            last_messages[group.id] = sent.id
+                msg = await client.send_message(dialog.id, message)
+                LAST_MESSAGES[dialog.id] = msg.id
+                success += 1
 
-            success += 1
+            await asyncio.sleep(1)
 
-        except FloodWaitError as e:
-            await asyncio.sleep(e.seconds)
-
-        except Exception:
+        except Exception as e:
             failed += 1
+            FAILED_CHATS.append(f"{dialog.name} -> {str(e)}")
 
-        await asyncio.sleep(2)
+    result = f"""
+⚠️ Broadcast berhasil
 
-    return success, failed
+✅ Berhasil: {success}
+❌ Gagal: {failed}
+✉️ Tipe: gcast
+🤖 ID Tugas: {task_id}
+👤 Owner: Anonymous
 
-@client.on(events.NewMessage(pattern=r"\.gcast (.+)", outgoing=True))
+Ketik .bc-error buat lihat yang gagal.
+"""
+
+    return result
+
+
+@client.on(events.NewMessage(outgoing=True, pattern=r'^\.gcast (.+)'))
 async def gcast(event):
-    if event.sender_id != OWNER_ID:
+    text = event.pattern_match.group(1)
+    await event.edit("⏳ Mengirim broadcast...")
+
+    result = await send_gcast(text)
+    await event.edit(result)
+
+
+@client.on(events.NewMessage(outgoing=True, pattern=r'^\.gcast(\d+) (.+)'))
+async def auto_gcast(event):
+    global AUTO_GCAST, AUTO_MESSAGE, AUTO_DELAY
+
+    AUTO_GCAST = True
+
+    menit = int(event.pattern_match.group(1))
+    AUTO_DELAY = menit * 60
+    AUTO_MESSAGE = event.pattern_match.group(2)
+
+    await event.edit(
+        f"🔥 Auto GCast aktif\n\n⏱ Delay: {menit} menit\n📨 Pesan: {AUTO_MESSAGE}"
+    )
+
+    while AUTO_GCAST:
+        result = await send_gcast(AUTO_MESSAGE)
+        await event.respond(result)
+        await asyncio.sleep(AUTO_DELAY)
+
+
+@client.on(events.NewMessage(outgoing=True, pattern=r'^\.stopgcast$'))
+async def stop_gcast(event):
+    global AUTO_GCAST
+
+    AUTO_GCAST = False
+    await event.edit("🛑 Auto GCast dihentikan.")
+
+
+@client.on(events.NewMessage(outgoing=True, pattern=r'^\.bc-error$'))
+async def bc_error(event):
+    global FAILED_CHATS
+
+    if not FAILED_CHATS:
+        await event.edit("✅ Tidak ada error broadcast.")
         return
 
-    msg = event.pattern_match.group(1)
+    text = "❌ LIST ERROR GCAST\n\n"
 
-    await event.edit("📡 Memulai broadcast...")
-
-    ok, bad = await send_broadcast(msg)
-
-    tid = task_id()
-
-    text = (
-        f"⚠️ Broadcast berhasil\n\n"
-        f"✅ Berhasil: {ok}\n"
-        f"❌ Gagal: {bad}\n"
-        f"✉️ Tipe: gcast\n"
-        f"🤖 ID Tugas: {tid}\n"
-        f"👤 Owner: {OWNER_NAME}"
-    )
+    for x in FAILED_CHATS[:30]:
+        text += f"• {x}\n"
 
     await event.edit(text)
 
-@client.on(events.NewMessage(pattern=r"\.autogcast (\d+) (.+)", outgoing=True))
-async def auto_gcast(event):
-    global active_auto
 
-    if event.sender_id != OWNER_ID:
-        return
+print("🔥 USERBOT GCAST ONLINE")
+client.start()
+client.run_until_disconnected()
+```
 
-    menit = int(event.pattern_match.group(1))
-    pesan = event.pattern_match.group(2)
+## Cara update GitHub
 
-    active_auto = True
+```bash
+git add .
+git commit -m "upgrade gcast"
+git push
+```
 
-    await event.reply(
-        f"🔥 AUTO GCAST AKTIF\n\n"
-        f"⏱ Interval: {menit} menit"
-    )
+## Command
 
-    while active_auto:
-        await send_broadcast(pesan)
-        await asyncio.sleep(menit * 60)
+```txt
+.gcast halo
+```
 
-@client.on(events.NewMessage(pattern=r"\.stopgcast", outgoing=True))
-async def stop_gcast(event):
-    global active_auto
+Broadcast sekali.
 
-    active_auto = False
+```txt
+.gcast10 halo
+```
 
-    await event.reply("🛑 AUTO GCAST dihentikan")
+Auto broadcast tiap 10 menit.
 
-async def main():
-    await client.start()
+```txt
+.gcast15 halo
+```
 
-    me = await client.get_me()
-    print(f"LOGIN BERHASIL: {me.first_name}")
+Auto broadcast tiap 15 menit.
 
-    await client.run_until_disconnected()
+```txt
+.stopgcast
+```
 
-asyncio.run(main())
+Stop auto gcast.
+
+```txt
+.bc-error
+```
+
+Lihat grup yang gagal.
