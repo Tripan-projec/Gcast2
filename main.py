@@ -137,10 +137,10 @@ to view failed broadcast.
 
 
 # =========================
-# PASANG HANDLER KE SEMUA AKUN
+# REGISTER HANDLER
 # =========================
 
-for client in clients:
+def register_handlers(client):
 
     # =========================
     # GCAST SEKALI
@@ -150,7 +150,7 @@ for client in clients:
         from_users='me',
         pattern=r'^\.gcast\s+(.+)'
     ))
-    async def gcast(event, client=client):
+    async def gcast(event):
 
         text = event.pattern_match.group(1)
 
@@ -180,7 +180,7 @@ for client in clients:
         from_users='me',
         pattern=r'^\.autogcast(\d+)\s+(.+)'
     ))
-    async def auto_gcast(event, client=client):
+    async def auto_gcast(event):
 
         global AUTO_GCAST
 
@@ -235,7 +235,7 @@ for client in clients:
         from_users='me',
         pattern=r'^\.stopgcast$'
     ))
-    async def stop_gcast(event, client=client):
+    async def stop_gcast(event):
 
         AUTO_GCAST[client] = False
 
@@ -252,7 +252,7 @@ for client in clients:
         from_users='me',
         pattern=r'^\.bc-error$'
     ))
-    async def bc_error(event, client=client):
+    async def bc_error(event):
 
         if not FAILED_CHATS.get(client):
 
@@ -315,7 +315,7 @@ for client in clients:
         from_users='me',
         pattern=r'^\.ping$'
     ))
-    async def ping(event, client=client):
+    async def ping(event):
 
         me = await client.get_me()
 
@@ -323,6 +323,15 @@ for client in clients:
             f"🏓 Pong!\n"
             f"👤 {me.first_name}"
         )
+
+
+# =========================
+# REGISTER SEMUA AKUN
+# =========================
+
+for client in clients:
+
+    register_handlers(client)
 
 
 # =========================
