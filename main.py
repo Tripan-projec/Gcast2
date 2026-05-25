@@ -22,8 +22,7 @@ client = TelegramClient(
 FAILED_CHATS = []
 LAST_MESSAGES = {}
 
-AUTO_GCAST_RUNNING = False
-AUTO_GCAST_TASK = None
+AUTO_GCAST = False
 
 
 # =========================
@@ -62,7 +61,7 @@ async def send_gcast(message, owner_name):
             if dialog.is_group:
 
                 # =========================
-                # HAPUS PESAN LAMA
+                # HAPUS PESAN GCAST LAMA
                 # =========================
 
                 if dialog.id in LAST_MESSAGES:
@@ -78,7 +77,7 @@ async def send_gcast(message, owner_name):
                         pass
 
                 # =========================
-                # KIRIM GCAST BARU
+                # KIRIM PESAN BARU
                 # =========================
 
                 msg = await client.send_message(
@@ -156,8 +155,7 @@ async def gcast(event):
 ))
 async def auto_gcast(event):
 
-    global AUTO_GCAST_RUNNING
-    global AUTO_GCAST_TASK
+    global AUTO_GCAST
 
     menit = int(
         event.pattern_match.group(1)
@@ -165,54 +163,40 @@ async def auto_gcast(event):
 
     text = event.pattern_match.group(2)
 
-    if AUTO_GCAST_RUNNING:
-
-        return await event.edit(
-            "⚠️ Auto gcast sudah aktif."
-        )
-
-    AUTO_GCAST_RUNNING = True
+    AUTO_GCAST = True
 
     await event.edit(
         f"🔥 Auto Gcast aktif\n"
         f"⏱ Interval: {menit} menit"
     )
 
-    async def loop_gcast():
+    while AUTO_GCAST:
 
-        global AUTO_GCAST_RUNNING
+        try:
 
-        while AUTO_GCAST_RUNNING:
+            me = await client.get_me()
 
-            try:
-
-                me = await client.get_me()
-
-                result = await send_gcast(
-                    text,
-                    me.first_name
-                )
-
-                await client.send_message(
-                    "me",
-                    result,
-                    parse_mode='html'
-                )
-
-            except Exception as e:
-
-                await client.send_message(
-                    "me",
-                    f"❌ Error:\n{str(e)}"
-                )
-
-            await asyncio.sleep(
-                menit * 60
+            result = await send_gcast(
+                text,
+                me.first_name
             )
 
-    AUTO_GCAST_TASK = asyncio.create_task(
-        loop_gcast()
-    )
+            await client.send_message(
+                "me",
+                result,
+                parse_mode='html'
+            )
+
+        except Exception as e:
+
+            await client.send_message(
+                "me",
+                f"❌ Error:\n{str(e)}"
+            )
+
+        await asyncio.sleep(
+            menit * 60
+        )
 
 
 # =========================
@@ -225,14 +209,9 @@ async def auto_gcast(event):
 ))
 async def stop_gcast(event):
 
-    global AUTO_GCAST_RUNNING
-    global AUTO_GCAST_TASK
+    global AUTO_GCAST
 
-    AUTO_GCAST_RUNNING = False
-
-    if AUTO_GCAST_TASK:
-
-        AUTO_GCAST_TASK.cancel()
+    AUTO_GCAST = False
 
     await event.edit(
         "🛑 Auto Gcast dihentikan"
