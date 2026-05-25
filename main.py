@@ -152,7 +152,7 @@ async def gcast(event):
 
 @client.on(events.NewMessage(
     from_users='me',
-    pattern=r'^\.autogcast\s+(\d+)\s+(.+)'
+    pattern=r'^\.autogcast(\d+)\s+(.+)'
 ))
 async def auto_gcast(event):
 
@@ -203,7 +203,7 @@ async def auto_gcast(event):
 
                 await client.send_message(
                     "me",
-                    f"❌ Error auto gcast:\n{str(e)}"
+                    f"❌ Error:\n{str(e)}"
                 )
 
             await asyncio.sleep(
@@ -280,10 +280,10 @@ async def help_cmd(event):
 .gcast teks
 = gcast sekali
 
-.autogcast 10 teks
+.autogcast10 teks
 = auto gcast tiap 10 menit
 
-.autogcast 15 teks
+.autogcast15 teks
 = auto gcast tiap 15 menit
 
 .stopgcast
