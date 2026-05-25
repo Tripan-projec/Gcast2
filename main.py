@@ -11,18 +11,36 @@ load_dotenv()
 
 API_ID = int(os.getenv("API_ID"))
 API_HASH = os.getenv("API_HASH")
-SESSION_STRING = os.getenv("SESSION_STRING")
 
-client = TelegramClient(
-    StringSession(SESSION_STRING),
-    API_ID,
-    API_HASH
-)
+# =========================
+# MULTI SESSION
+# =========================
 
-FAILED_CHATS = []
+SESSIONS = [
+    os.getenv("SESSION1"),
+    os.getenv("SESSION2"),
+    os.getenv("SESSION3"),
+    os.getenv("SESSION4"),
+    os.getenv("SESSION5")
+]
+
+clients = []
+
+for session in SESSIONS:
+
+    if session:
+
+        client = TelegramClient(
+            StringSession(session),
+            API_ID,
+            API_HASH
+        )
+
+        clients.append(client)
+
+FAILED_CHATS = {}
 LAST_MESSAGES = {}
-
-AUTO_GCAST = False
+AUTO_GCAST = {}
 
 
 # =========================
@@ -42,7 +60,7 @@ def random_id(length=8):
 # SEND GCAST
 # =========================
 
-async def send_gcast(message, owner_name):
+async def send_gcast(client, message, owner_name):
 
     global FAILED_CHATS
     global LAST_MESSAGES
@@ -50,7 +68,7 @@ async def send_gcast(message, owner_name):
     success = 0
     failed = 0
 
-    FAILED_CHATS = []
+    FAILED_CHATS[client] = []
 
     tid = random_id()
 
@@ -60,17 +78,19 @@ async def send_gcast(message, owner_name):
 
             if dialog.is_group:
 
+                key = f"{client}_{dialog.id}"
+
                 # =========================
-                # HAPUS PESAN GCAST LAMA
+                # HAPUS PESAN LAMA
                 # =========================
 
-                if dialog.id in LAST_MESSAGES:
+                if key in LAST_MESSAGES:
 
                     try:
 
                         await client.delete_messages(
                             dialog.id,
-                            LAST_MESSAGES[dialog.id]
+                            LAST_MESSAGES[key]
                         )
 
                     except:
@@ -85,7 +105,7 @@ async def send_gcast(message, owner_name):
                     message
                 )
 
-                LAST_MESSAGES[dialog.id] = msg.id
+                LAST_MESSAGES[key] = msg.id
 
                 success += 1
 
@@ -95,21 +115,21 @@ async def send_gcast(message, owner_name):
 
             failed += 1
 
-            FAILED_CHATS.append(
+            FAILED_CHATS[client].append(
                 f"{dialog.name} -> {str(e)}"
             )
 
     text = f"""
 <blockquote expandable>
-⚠️ <b>Gcast Sukses</b>
+⚠️ <b>GCAST SUKSES</b>
 
 ✅ Success: {success}
 ❌ Failed: {failed}
-✉️ Type: gcast
 ⚙️ Task ID: {tid}
 👤 Owner: {owner_name}
 
-Type <code>.bc-error</code> to view failed broadcast.
+Type <code>.bc-error</code>
+to view failed broadcast.
 </blockquote>
 """
 
@@ -117,144 +137,150 @@ Type <code>.bc-error</code> to view failed broadcast.
 
 
 # =========================
-# GCAST SEKALI
+# PASANG HANDLER KE SEMUA AKUN
 # =========================
 
-@client.on(events.NewMessage(
-    from_users='me',
-    pattern=r'^\.gcast\s+(.+)'
-))
-async def gcast(event):
+for client in clients:
 
-    text = event.pattern_match.group(1)
+    # =========================
+    # GCAST SEKALI
+    # =========================
 
-    await event.edit(
-        "⏳ Mengirim broadcast..."
-    )
+    @client.on(events.NewMessage(
+        from_users='me',
+        pattern=r'^\.gcast\s+(.+)'
+    ))
+    async def gcast(event, client=client):
 
-    me = await client.get_me()
+        text = event.pattern_match.group(1)
 
-    result = await send_gcast(
-        text,
-        me.first_name
-    )
+        await event.edit(
+            "⏳ Mengirim broadcast..."
+        )
 
-    await event.edit(
-        result,
-        parse_mode='html'
-    )
+        me = await client.get_me()
 
+        result = await send_gcast(
+            client,
+            text,
+            me.first_name
+        )
 
-# =========================
-# AUTO GCAST
-# =========================
-
-@client.on(events.NewMessage(
-    from_users='me',
-    pattern=r'^\.autogcast(\d+)\s+(.+)'
-))
-async def auto_gcast(event):
-
-    global AUTO_GCAST
-
-    menit = int(
-        event.pattern_match.group(1)
-    )
-
-    text = event.pattern_match.group(2)
-
-    AUTO_GCAST = True
-
-    await event.edit(
-        f"🔥 Auto Gcast aktif\n"
-        f"⏱ Interval: {menit} menit"
-    )
-
-    while AUTO_GCAST:
-
-        try:
-
-            me = await client.get_me()
-
-            result = await send_gcast(
-                text,
-                me.first_name
-            )
-
-            await client.send_message(
-                "me",
-                result,
-                parse_mode='html'
-            )
-
-        except Exception as e:
-
-            await client.send_message(
-                "me",
-                f"❌ Error:\n{str(e)}"
-            )
-
-        await asyncio.sleep(
-            menit * 60
+        await event.edit(
+            result,
+            parse_mode='html'
         )
 
 
-# =========================
-# STOP GCAST
-# =========================
+    # =========================
+    # AUTO GCAST
+    # =========================
 
-@client.on(events.NewMessage(
-    from_users='me',
-    pattern=r'^\.stopgcast$'
-))
-async def stop_gcast(event):
+    @client.on(events.NewMessage(
+        from_users='me',
+        pattern=r'^\.autogcast(\d+)\s+(.+)'
+    ))
+    async def auto_gcast(event, client=client):
 
-    global AUTO_GCAST
+        global AUTO_GCAST
 
-    AUTO_GCAST = False
-
-    await event.edit(
-        "🛑 Auto Gcast dihentikan"
-    )
-
-
-# =========================
-# BC ERROR
-# =========================
-
-@client.on(events.NewMessage(
-    from_users='me',
-    pattern=r'^\.bc-error$'
-))
-async def bc_error(event):
-
-    if not FAILED_CHATS:
-
-        return await event.edit(
-            "✅ Tidak ada chat gagal."
+        menit = int(
+            event.pattern_match.group(1)
         )
 
-    text = "❌ CHAT GAGAL:\n\n"
+        text = event.pattern_match.group(2)
 
-    for x in FAILED_CHATS:
+        AUTO_GCAST[client] = True
 
-        text += f"{x}\n"
+        await event.edit(
+            f"🔥 Auto Gcast aktif\n"
+            f"⏱ Interval: {menit} menit"
+        )
 
-    await event.edit(text)
+        while AUTO_GCAST.get(client):
+
+            try:
+
+                me = await client.get_me()
+
+                result = await send_gcast(
+                    client,
+                    text,
+                    me.first_name
+                )
+
+                await client.send_message(
+                    "me",
+                    result,
+                    parse_mode='html'
+                )
+
+            except Exception as e:
+
+                await client.send_message(
+                    "me",
+                    f"❌ Error:\n{str(e)}"
+                )
+
+            await asyncio.sleep(
+                menit * 60
+            )
 
 
-# =========================
-# HELP
-# =========================
+    # =========================
+    # STOP GCAST
+    # =========================
 
-@client.on(events.NewMessage(
-    from_users='me',
-    pattern=r'^\.help$'
-))
-async def help_cmd(event):
+    @client.on(events.NewMessage(
+        from_users='me',
+        pattern=r'^\.stopgcast$'
+    ))
+    async def stop_gcast(event, client=client):
 
-    text = """
-🔥 MENU GCAST
+        AUTO_GCAST[client] = False
+
+        await event.edit(
+            "🛑 Auto Gcast dihentikan"
+        )
+
+
+    # =========================
+    # BC ERROR
+    # =========================
+
+    @client.on(events.NewMessage(
+        from_users='me',
+        pattern=r'^\.bc-error$'
+    ))
+    async def bc_error(event, client=client):
+
+        if not FAILED_CHATS.get(client):
+
+            return await event.edit(
+                "✅ Tidak ada chat gagal."
+            )
+
+        text = "❌ CHAT GAGAL:\n\n"
+
+        for x in FAILED_CHATS[client]:
+
+            text += f"{x}\n"
+
+        await event.edit(text)
+
+
+    # =========================
+    # HELP
+    # =========================
+
+    @client.on(events.NewMessage(
+        from_users='me',
+        pattern=r'^\.help$'
+    ))
+    async def help_cmd(event):
+
+        text = """
+🔥 MULTI USERBOT GCAST
 
 .gcast teks
 = gcast sekali
@@ -269,7 +295,7 @@ async def help_cmd(event):
 = stop auto gcast
 
 .bc-error
-= lihat chat gagal
+= lihat grup gagal
 
 .ping
 = cek bot online
@@ -278,22 +304,25 @@ async def help_cmd(event):
 = menu bantuan
 """
 
-    await event.edit(text)
+        await event.edit(text)
 
 
-# =========================
-# PING
-# =========================
+    # =========================
+    # PING
+    # =========================
 
-@client.on(events.NewMessage(
-    from_users='me',
-    pattern=r'^\.ping$'
-))
-async def ping(event):
+    @client.on(events.NewMessage(
+        from_users='me',
+        pattern=r'^\.ping$'
+    ))
+    async def ping(event, client=client):
 
-    await event.edit(
-        "🏓 Pong! Bot aktif."
-    )
+        me = await client.get_me()
+
+        await event.edit(
+            f"🏓 Pong!\n"
+            f"👤 {me.first_name}"
+        )
 
 
 # =========================
@@ -306,15 +335,24 @@ async def main():
 
         try:
 
-            await client.start()
+            for client in clients:
 
-            me = await client.get_me()
+                await client.start()
 
-            print(
-                f"🔥 USERBOT GCAST ONLINE: {me.first_name}"
+                me = await client.get_me()
+
+                print(
+                    f"🔥 Login: {me.first_name}"
+                )
+
+            print("✅ Semua akun aktif")
+
+            await asyncio.gather(
+                *[
+                    client.run_until_disconnected()
+                    for client in clients
+                ]
             )
-
-            await client.run_until_disconnected()
 
         except Exception as e:
 
