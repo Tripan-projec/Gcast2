@@ -90,7 +90,7 @@ async def send_gcast(message, owner_name):
 
                 success += 1
 
-                await asyncio.sleep(1)
+                await asyncio.sleep(3)
 
         except Exception as e:
 
@@ -323,14 +323,30 @@ async def ping(event):
 
 async def main():
 
-    await client.start()
+    while True:
 
-    me = await client.get_me()
+        try:
 
-    print(
-        f"🔥 USERBOT GCAST ONLINE: {me.first_name}"
-    )
+            await client.start()
 
-    await client.run_until_disconnected()
+            me = await client.get_me()
+
+            print(
+                f"🔥 USERBOT GCAST ONLINE: {me.first_name}"
+            )
+
+            await client.run_until_disconnected()
+
+        except Exception as e:
+
+            print(
+                f"❌ Disconnect: {e}"
+            )
+
+            print(
+                "🔄 Reconnecting 5 detik..."
+            )
+
+            await asyncio.sleep(5)
 
 asyncio.run(main())
