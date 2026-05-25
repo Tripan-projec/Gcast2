@@ -326,38 +326,29 @@ for client in clients:
 
 
 # =========================
-# START BOT
+# START CLIENT
 # =========================
 
-async def main():
+async def start_client(client):
 
     while True:
 
         try:
 
-            for client in clients:
+            await client.start()
 
-                await client.start()
+            me = await client.get_me()
 
-                me = await client.get_me()
-
-                print(
-                    f"🔥 Login: {me.first_name}"
-                )
-
-            print("✅ Semua akun aktif")
-
-            await asyncio.gather(
-                *[
-                    client.run_until_disconnected()
-                    for client in clients
-                ]
+            print(
+                f"🔥 Login: {me.first_name}"
             )
+
+            await client.run_until_disconnected()
 
         except Exception as e:
 
             print(
-                f"❌ Disconnect: {e}"
+                f"❌ {e}"
             )
 
             print(
@@ -365,5 +356,26 @@ async def main():
             )
 
             await asyncio.sleep(5)
+
+
+# =========================
+# START BOT
+# =========================
+
+async def main():
+
+    tasks = []
+
+    for client in clients:
+
+        tasks.append(
+            asyncio.create_task(
+                start_client(client)
+            )
+        )
+
+    print("✅ Semua akun aktif")
+
+    await asyncio.gather(*tasks)
 
 asyncio.run(main())
